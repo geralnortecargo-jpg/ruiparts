@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { Search, Car, PackageCheck, Truck, Store, ShieldCheck, ShoppingCart, CreditCard } from "lucide-react";
 
-// Exemplo de stock de peças para a Demo (Simulação das 5.000+ peças)
 const SAMPLE_PARTS = [
   {
     id: "P001",
@@ -74,12 +73,10 @@ export default function RuiPartsDemo() {
 
   return (
     <main className="min-h-screen bg-slate-950 text-slate-100 font-sans">
-      {/* Top Banner Demo */}
       <div className="bg-gradient-to-r from-cyan-600 to-blue-600 px-4 py-2 text-center text-xs font-bold text-white tracking-wide uppercase">
         ⚡ DEMO INTERATIVA PARA CLIENTE • RUI PARTS (SISTEMA DE PEÇAS & LOGÍSTICA)
       </div>
 
-      {/* Header */}
       <header className="border-b border-slate-800 bg-slate-900/50 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="flex items-center gap-3">
@@ -98,7 +95,6 @@ export default function RuiPartsDemo() {
         </div>
       </header>
 
-      {/* Hero & Search Engine */}
       <section className="max-w-7xl mx-auto px-4 py-10">
         <div className="bg-gradient-to-b from-slate-900 to-slate-900/60 p-6 md:p-10 rounded-3xl border border-slate-800 shadow-2xl">
           <h2 className="text-2xl md:text-3xl font-extrabold text-white mb-2">
@@ -135,7 +131,6 @@ export default function RuiPartsDemo() {
         </div>
       </section>
 
-      {/* Listing */}
       <section className="max-w-7xl mx-auto px-4 pb-20">
         <h3 className="text-lg font-bold text-slate-200 mb-6 flex items-center gap-2">
           <Car className="w-5 h-5 text-cyan-400" /> Resultados Disponíveis ({filteredParts.length})
@@ -179,7 +174,6 @@ export default function RuiPartsDemo() {
         </div>
       </section>
 
-      {/* Modal de Checkout / Logística / MB WAY */}
       {selectedPart && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-slate-900 border border-slate-700 rounded-3xl max-w-lg w-full p-6 relative shadow-2xl">
@@ -195,7 +189,6 @@ export default function RuiPartsDemo() {
                 <h3 className="text-xl font-bold text-white mb-1">Finalizar Encomenda</h3>
                 <p className="text-xs text-slate-400 mb-4">{selectedPart.name} - <strong>{selectedPart.price} €</strong></p>
 
-                {/* Escolha de Logística */}
                 <div className="mb-6">
                   <label className="text-xs text-slate-300 font-semibold uppercase tracking-wider block mb-2">Método de Entrega</label>
                   <div className="grid grid-cols-2 gap-3">
@@ -225,7 +218,6 @@ export default function RuiPartsDemo() {
                   </div>
                 </div>
 
-                {/* Pagamento MB WAY */}
                 <div className="mb-6">
                   <label className="text-xs text-slate-300 font-semibold uppercase tracking-wider block mb-2">Pagamento Imediato</label>
                   <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
