@@ -1,11 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import { PackageCheck, Menu, X, Phone, History, Home, UserPlus } from "lucide-react";
+import { PackageCheck, Menu, X, Phone, History, Home, UserPlus, User } from "lucide-react";
 import Link from "next/link";
 
 export default function RuipartsNavbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  <Link 
+  href="/dashboard" 
+  className="bg-slate-900 border border-white/15 hover:border-slate-300 text-slate-200 px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2"
+>
+  <User className="w-4 h-4 text-slate-300" />
+  O Meu Painel
+</Link>
 
   return (
     <header className="border-b border-white/10 bg-slate-950/80 backdrop-blur-md sticky top-0 z-50">
