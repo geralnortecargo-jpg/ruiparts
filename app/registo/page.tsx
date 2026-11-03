@@ -29,6 +29,7 @@ export default function RegisterPage() {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("Botão de registo clicado! A submeter dados:", formData.email);
     setLoading(true);
     setErrorMessage("");
 
@@ -37,7 +38,7 @@ export default function RegisterPage() {
         throw new Error("O NIF deve conter exatamente 9 dígitos para integração correta com o Sage.");
       }
 
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
         options: {
@@ -58,8 +59,15 @@ export default function RegisterPage() {
       });
 
       if (error) throw error;
-      setSuccessMessage(true);
+
+      // Redireciona diretamente para o dashboard se a sessão estiver ativa
+      if (data.session) {
+        window.location.href = "/dashboard";
+      } else {
+        setSuccessMessage(true);
+      }
     } catch (err: any) {
+      console.error("Erro no registo Supabase:", err);
       setErrorMessage(err.message || "Erro ao criar conta. Tente novamente.");
     } finally {
       setLoading(false);
@@ -105,10 +113,10 @@ export default function RegisterPage() {
                   A conta foi criada e está pronta. Pode iniciar sessão na página principal.
                 </p>
                 <Link
-                  href="/"
+                  href="/dashboard"
                   className="inline-block bg-slate-300 hover:bg-white text-slate-950 font-bold px-6 py-2.5 rounded-xl text-xs transition-colors"
                 >
-                  Ir para a Página Inicial
+                  Ir para o Dashboard
                 </Link>
               </div>
             ) : (
@@ -264,7 +272,7 @@ export default function RegisterPage() {
                 {/* 4. Morada de Envio */}
                 <div className="bg-slate-900/60 p-5 rounded-2xl border border-white/10 space-y-4">
                   <h3 className="text-sm font-bold text-slate-200 flex items-center gap-2">
-                    <MapPin className="w-4 h-4 text-slate-300" /> 4. Morada de Envio (7 Dígitos para Sage)
+                    <MapPin className="w-4 h-4 text-slate-300" /> 4. Morada de Envio
                   </h3>
 
                   <div className="flex items-center gap-2 pb-2">
@@ -306,7 +314,7 @@ export default function RegisterPage() {
                         </div>
 
                         <div>
-                          <label className="text-xs text-slate-300 block mb-1">C. Postal (Ex: 4400-123)</label>
+                          <label className="text-xs text-slate-300 block mb-1">C. Postal</label>
                           <input
                             type="text"
                             maxLength={8}
