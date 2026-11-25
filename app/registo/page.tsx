@@ -1,347 +1,154 @@
 "use client";
 
-import { useState } from "react";
-import { User, Lock, Mail, Phone, MapPin, Building, ShieldCheck, ArrowLeft, FileText, Hash } from "lucide-react";
-import { supabase } from "@/lib/supabase";
 import Link from "next/link";
-import RuipartsNavbar from "@/components/Navbar";
+import { FormEvent, useState } from "react";
+import { supabase } from "@/lib/supabase";
 
-export default function RegisterPage() {
-  const [formData, setFormData] = useState({
-    accountType: "particular",
-    name: "",
-    nif: "",
-    email: "",
-    password: "",
-    phone: "",
-    billingAddress: "",
-    billingCity: "",
-    billingPostalCode: "",
-    shippingAddress: "",
-    shippingCity: "",
-    shippingPostalCode: "",
-    sameAsBilling: true
-  });
-  
+const inicial = {
+  accountType: "particular",
+  name: "",
+  nif: "",
+  email: "",
+  password: "",
+  phone: "",
+  billingAddress: "",
+  billingCity: "",
+  billingPostalCode: "",
+  shippingAddress: "",
+  shippingCity: "",
+  shippingPostalCode: "",
+  sameAsBilling: true,
+};
+
+export default function RegistoPage() {
+  const [form, setForm] = useState(inicial);
   const [loading, setLoading] = useState(false);
-  const [successMessage, setSuccessMessage] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
+  const [done, setDone] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log("Botão de registo clicado! A submeter dados:", formData.email);
+  function set<K extends keyof typeof inicial>(key: K, value: (typeof inicial)[K]) {
+    setForm((atual) => ({ ...atual, [key]: value }));
+  }
+
+  async function submeter(event: FormEvent) {
+    event.preventDefault();
     setLoading(true);
-    setErrorMessage("");
-
-    try {
-      if (formData.nif && formData.nif.length !== 9) {
-        throw new Error("O NIF deve conter exatamente 9 dígitos para integração correta com o Sage.");
-      }
-
-      const { data, error } = await supabase.auth.signUp({
-        email: formData.email,
-        password: formData.password,
-        options: {
-          data: {
-            account_type: formData.accountType,
-            name: formData.name,
-            nif: formData.nif,
-            phone: formData.phone,
-            billing_address: formData.billingAddress,
-            billing_city: formData.billingCity,
-            billing_postal_code: formData.billingPostalCode,
-            shipping_address: formData.sameAsBilling ? formData.billingAddress : formData.shippingAddress,
-            shipping_city: formData.sameAsBilling ? formData.billingCity : formData.shippingCity,
-            shipping_postal_code: formData.sameAsBilling ? formData.billingPostalCode : formData.shippingPostalCode,
-            erp_synced: false
-          }
-        }
-      });
-
-      if (error) throw error;
-
-      // Redireciona diretamente para o dashboard se a sessão estiver ativa
-      if (data.session) {
-        window.location.href = "/dashboard";
-      } else {
-        setSuccessMessage(true);
-      }
-    } catch (err: any) {
-      console.error("Erro no registo Supabase:", err);
-      setErrorMessage(err.message || "Erro ao criar conta. Tente novamente.");
-    } finally {
+    setError("");
+    if (form.nif.length !== 9) {
+      setError("O NIF tem de ter 9 dígitos.");
       setLoading(false);
+      return;
     }
-  };
+
+    const meta = {
+      account_type: form.accountType,
+      name: form.name,
+      nif: form.nif,
+      phone: form.phone,
+      billing_address: form.billingAddress,
+      billing_city: form.billingCity,
+      billing_postal_code: form.billingPostalCode,
+      shipping_address: form.sameAsBilling ? form.billingAddress : form.shippingAddress,
+      shipping_city: form.sameAsBilling ? form.billingCity : form.shippingCity,
+      shipping_postal_code: form.sameAsBilling ? form.billingPostalCode : form.shippingPostalCode,
+    };
+
+    const { data, error: authError } = await supabase.auth.signUp({
+      email: form.email,
+      password: form.password,
+      options: { data: meta },
+    });
+
+    if (authError) {
+      setError(authError.message);
+      setLoading(false);
+      return;
+    }
+
+    if (data.user) {
+      await supabase.from("profiles").upsert({
+        id: data.user.id,
+        full_name: form.name,
+        nif: form.nif,
+        phone: form.phone,
+        address: [meta.billing_address, meta.billing_postal_code, meta.billing_city].filter(Boolean).join(", "),
+        role: form.accountType === "empresa" ? "workshop" : "customer",
+      });
+    }
+
+    setLoading(false);
+    if (data.session) window.location.href = "/dashboard";
+    else setDone(true);
+  }
 
   return (
-    <main className="min-h-screen text-slate-100 font-sans relative">
-      <div 
-        className="fixed inset-0 z-0 bg-no-repeat bg-top"
-        style={{ backgroundImage: `url('/ruiparts-bg.jpg')`, backgroundSize: '70% auto' }}
-      >
-        <div className="absolute inset-0 bg-slate-950/75 backdrop-blur-[1px]"></div>
-      </div>
-
-      <div className="relative z-10">
-        <RuipartsNavbar />
-
-        <div className="max-w-2xl mx-auto px-4 py-12">
-          <div className="bg-slate-950/85 backdrop-blur-2xl border border-white/15 p-8 rounded-3xl shadow-2xl relative">
-            
-            <Link href="/" className="inline-flex items-center gap-2 text-xs text-slate-400 hover:text-white mb-6 transition-colors">
-              <ArrowLeft className="w-4 h-4" /> Voltar ao Catálogo
-            </Link>
-
-            <div className="mb-6">
-              <span className="bg-slate-300 text-slate-950 text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full shadow">
-                Registo de Cliente / Oficina
-              </span>
-              <h2 className="text-2xl md:text-3xl font-black text-white mt-2">Ficha de Cliente Integrável (Sage)</h2>
-              <p className="text-xs text-slate-300 mt-1">
-                Preencha os dados fiscais e logísticos para garantir compatibilidade com o ERP.
-              </p>
-            </div>
-
-            {successMessage ? (
-              <div className="text-center py-8 space-y-4 bg-slate-900/80 border border-emerald-500/30 rounded-2xl p-6">
-                <div className="w-16 h-16 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mx-auto border border-emerald-500/30">
-                  <ShieldCheck className="w-10 h-10" />
-                </div>
-                <h3 className="text-xl font-bold text-white">Registo Efetuado com Sucesso!</h3>
-                <p className="text-xs text-slate-300">
-                  A conta foi criada e está pronta. Pode iniciar sessão na página principal.
-                </p>
-                <Link
-                  href="/dashboard"
-                  className="inline-block bg-slate-300 hover:bg-white text-slate-950 font-bold px-6 py-2.5 rounded-xl text-xs transition-colors"
-                >
-                  Ir para o Dashboard
-                </Link>
-              </div>
-            ) : (
-              <form onSubmit={handleRegister} className="space-y-6">
-                {errorMessage && (
-                  <div className="bg-red-500/20 border border-red-500/30 text-red-200 text-xs p-3 rounded-xl">
-                    {errorMessage}
-                  </div>
-                )}
-
-                {/* 1. Dados Pessoais / Empresa */}
-                <div className="bg-slate-900/60 p-5 rounded-2xl border border-white/10 space-y-4">
-                  <h3 className="text-sm font-bold text-slate-200 flex items-center gap-2">
-                    <Building className="w-4 h-4 text-slate-300" /> 1. Dados Pessoais / Empresa
-                  </h3>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-xs text-slate-300 block mb-1">Tipo de Conta</label>
-                      <select
-                        value={formData.accountType}
-                        onChange={(e) => setFormData({...formData, accountType: e.target.value})}
-                        className="w-full bg-slate-950 border border-white/15 rounded-xl py-2.5 px-3 text-xs text-white focus:outline-none focus:border-slate-300"
-                      >
-                        <option value="particular">Cliente Particular</option>
-                        <option value="empresa">Empresa / Oficina</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="text-xs text-slate-300 block mb-1">Nome / Designação Social</label>
-                      <div className="relative">
-                        <User className="absolute left-3 top-3 text-slate-400 w-4 h-4" />
-                        <input
-                          type="text"
-                          required
-                          placeholder="Ex: Auto Oficina Silva"
-                          value={formData.name}
-                          onChange={(e) => setFormData({...formData, name: e.target.value})}
-                          className="w-full bg-slate-950 border border-white/15 rounded-xl py-2.5 pl-10 pr-3 text-xs text-white focus:outline-none focus:border-slate-300"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="text-xs text-slate-300 block mb-1">NIF (9 Dígitos)</label>
-                    <div className="relative">
-                      <Hash className="absolute left-3 top-3 text-slate-400 w-4 h-4" />
-                      <input
-                        type="text"
-                        required
-                        maxLength={9}
-                        placeholder="Ex: 509123456"
-                        value={formData.nif}
-                        onChange={(e) => setFormData({...formData, nif: e.target.value.replace(/\D/g, '')})}
-                        className="w-full bg-slate-950 border border-white/15 rounded-xl py-2.5 pl-10 pr-3 text-xs text-white focus:outline-none focus:border-slate-300 font-mono"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* 2. Contactos */}
-                <div className="bg-slate-900/60 p-5 rounded-2xl border border-white/10 space-y-4">
-                  <h3 className="text-sm font-bold text-slate-200 flex items-center gap-2">
-                    <Mail className="w-4 h-4 text-slate-300" /> 2. Contactos e Credenciais
-                  </h3>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-xs text-slate-300 block mb-1">Email</label>
-                      <input
-                        type="email"
-                        required
-                        placeholder="exemplo@oficina.pt"
-                        value={formData.email}
-                        onChange={(e) => setFormData({...formData, email: e.target.value})}
-                        className="w-full bg-slate-950 border border-white/15 rounded-xl py-2.5 px-3 text-xs text-white focus:outline-none focus:border-slate-300"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-xs text-slate-300 block mb-1">Telemóvel</label>
-                      <input
-                        type="tel"
-                        required
-                        placeholder="9xx xxx xxx"
-                        value={formData.phone}
-                        onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                        className="w-full bg-slate-950 border border-white/15 rounded-xl py-2.5 px-3 text-xs text-white focus:outline-none focus:border-slate-300"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="text-xs text-slate-300 block mb-1">Palavra-passe</label>
-                    <input
-                      type="password"
-                      required
-                      placeholder="Mínimo 6 carateres"
-                      value={formData.password}
-                      onChange={(e) => setFormData({...formData, password: e.target.value})}
-                      className="w-full bg-slate-950 border border-white/15 rounded-xl py-2.5 px-3 text-xs text-white focus:outline-none focus:border-slate-300"
-                    />
-                  </div>
-                </div>
-
-                {/* 3. Morada de Faturação */}
-                <div className="bg-slate-900/60 p-5 rounded-2xl border border-white/10 space-y-4">
-                  <h3 className="text-sm font-bold text-slate-200 flex items-center gap-2">
-                    <FileText className="w-4 h-4 text-slate-300" /> 3. Morada de Faturação
-                  </h3>
-
-                  <div>
-                    <label className="text-xs text-slate-300 block mb-1">Morada Fiscal</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="Rua, Número, Andar"
-                      value={formData.billingAddress}
-                      onChange={(e) => setFormData({...formData, billingAddress: e.target.value})}
-                      className="w-full bg-slate-950 border border-white/15 rounded-xl py-2.5 px-3 text-xs text-white focus:outline-none focus:border-slate-300"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-xs text-slate-300 block mb-1">Localidade</label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="Ex: Porto"
-                        value={formData.billingCity}
-                        onChange={(e) => setFormData({...formData, billingCity: e.target.value})}
-                        className="w-full bg-slate-950 border border-white/15 rounded-xl py-2.5 px-3 text-xs text-white focus:outline-none focus:border-slate-300"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-xs text-slate-300 block mb-1">Código Postal</label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="Ex: 4000-000"
-                        value={formData.billingPostalCode}
-                        onChange={(e) => setFormData({...formData, billingPostalCode: e.target.value})}
-                        className="w-full bg-slate-950 border border-white/15 rounded-xl py-2.5 px-3 text-xs text-white focus:outline-none focus:border-slate-300 font-mono"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* 4. Morada de Envio */}
-                <div className="bg-slate-900/60 p-5 rounded-2xl border border-white/10 space-y-4">
-                  <h3 className="text-sm font-bold text-slate-200 flex items-center gap-2">
-                    <MapPin className="w-4 h-4 text-slate-300" /> 4. Morada de Envio
-                  </h3>
-
-                  <div className="flex items-center gap-2 pb-2">
-                    <input
-                      type="checkbox"
-                      id="sameAddress"
-                      checked={formData.sameAsBilling}
-                      onChange={(e) => setFormData({...formData, sameAsBilling: e.target.checked})}
-                      className="w-4 h-4 rounded bg-slate-950 border-white/15 text-slate-300"
-                    />
-                    <label htmlFor="sameAddress" className="text-xs text-slate-300 cursor-pointer">
-                      A morada de envio é igual à morada de faturação
-                    </label>
-                  </div>
-
-                  {!formData.sameAsBilling && (
-                    <div className="space-y-4 pt-2 border-t border-white/10">
-                      <div>
-                        <label className="text-xs text-slate-300 block mb-1">Morada de Entrega</label>
-                        <input
-                          type="text"
-                          placeholder="Rua de Entrega, nº 45"
-                          value={formData.shippingAddress}
-                          onChange={(e) => setFormData({...formData, shippingAddress: e.target.value})}
-                          className="w-full bg-slate-950 border border-white/15 rounded-xl py-2.5 px-3 text-xs text-white"
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="text-xs text-slate-300 block mb-1">Localidade de Entrega</label>
-                          <input
-                            type="text"
-                            placeholder="Vila Nova de Gaia"
-                            value={formData.shippingCity}
-                            onChange={(e) => setFormData({...formData, shippingCity: e.target.value})}
-                            className="w-full bg-slate-950 border border-white/15 rounded-xl py-2.5 px-3 text-xs text-white"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="text-xs text-slate-300 block mb-1">C. Postal</label>
-                          <input
-                            type="text"
-                            maxLength={8}
-                            placeholder="4400-123"
-                            value={formData.shippingPostalCode}
-                            onChange={(e) => setFormData({...formData, shippingPostalCode: e.target.value})}
-                            className="w-full bg-slate-950 border border-white/15 rounded-xl py-2.5 px-3 text-xs text-white font-mono"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full bg-slate-300 hover:bg-white disabled:opacity-50 text-slate-950 font-extrabold py-3.5 rounded-xl transition-all text-xs shadow-lg mt-4"
-                >
-                  {loading ? "A processar registo..." : "Submeter Ficha de Cliente / Oficina"}
-                </button>
-              </form>
-            )}
-
+    <main className="oms-wrap py-8">
+      <form className="oms-panel mx-auto grid max-w-2xl gap-4" onSubmit={submeter}>
+        <Link href="/" className="text-sm font-semibold text-[#6f6256]">Voltar ao stock</Link>
+        <p className="oms-kicker">Conta</p>
+        <h1 className="font-display text-5xl">Ficha de cliente</h1>
+        <p className="text-sm text-[#6f6256]">Particular ou oficina. O NIF e a morada ficam prontos para a fatura.</p>
+        {done ? (
+          <div>
+            <p className="font-semibold">Conta criada. Já podes entrar.</p>
+            <Link href="/" className="oms-btn mt-3">Ir ao catálogo</Link>
           </div>
-        </div>
-      </div>
+        ) : (
+          <>
+            {error ? <p className="text-sm text-[#9d3d0c]">{error}</p> : null}
+            <div className="grid gap-3 md:grid-cols-2">
+              <label className="oms-label">Tipo
+                <select className="oms-field" value={form.accountType} onChange={(e) => set("accountType", e.target.value)}>
+                  <option value="particular">Particular</option>
+                  <option value="empresa">Oficina / empresa</option>
+                </select>
+              </label>
+              <label className="oms-label">Nome
+                <input required className="oms-field" value={form.name} onChange={(e) => set("name", e.target.value)} />
+              </label>
+              <label className="oms-label">NIF
+                <input required maxLength={9} className="oms-field" value={form.nif} onChange={(e) => set("nif", e.target.value.replace(/\D/g, ""))} />
+              </label>
+              <label className="oms-label">Telemóvel
+                <input required className="oms-field" value={form.phone} onChange={(e) => set("phone", e.target.value)} />
+              </label>
+              <label className="oms-label">Email
+                <input required type="email" className="oms-field" value={form.email} onChange={(e) => set("email", e.target.value)} />
+              </label>
+              <label className="oms-label">Palavra-passe
+                <input required type="password" minLength={6} className="oms-field" value={form.password} onChange={(e) => set("password", e.target.value)} />
+              </label>
+              <label className="oms-label md:col-span-2">Morada de faturação
+                <input required className="oms-field" value={form.billingAddress} onChange={(e) => set("billingAddress", e.target.value)} />
+              </label>
+              <label className="oms-label">Localidade
+                <input required className="oms-field" value={form.billingCity} onChange={(e) => set("billingCity", e.target.value)} />
+              </label>
+              <label className="oms-label">Código postal
+                <input required className="oms-field" value={form.billingPostalCode} onChange={(e) => set("billingPostalCode", e.target.value)} />
+              </label>
+            </div>
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={form.sameAsBilling} onChange={(e) => set("sameAsBilling", e.target.checked)} />
+              A entrega é na mesma morada
+            </label>
+            {!form.sameAsBilling ? (
+              <div className="grid gap-3 md:grid-cols-2">
+                <label className="oms-label md:col-span-2">Morada de entrega
+                  <input className="oms-field" value={form.shippingAddress} onChange={(e) => set("shippingAddress", e.target.value)} />
+                </label>
+                <label className="oms-label">Localidade
+                  <input className="oms-field" value={form.shippingCity} onChange={(e) => set("shippingCity", e.target.value)} />
+                </label>
+                <label className="oms-label">Código postal
+                  <input className="oms-field" value={form.shippingPostalCode} onChange={(e) => set("shippingPostalCode", e.target.value)} />
+                </label>
+              </div>
+            ) : null}
+            <button className="oms-btn w-fit" disabled={loading}>{loading ? "A criar..." : "Criar conta"}</button>
+          </>
+        )}
+      </form>
     </main>
   );
 }
